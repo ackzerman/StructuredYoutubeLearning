@@ -5,7 +5,9 @@ const express = require("express");
 const cors = require("cors");
 
 const connectDB = require("./config/db");
-const healthRoute = require("./routes/healthRoutes");
+const healthRoute = require("./routes/healthRoute");
+const authRoutes   = require("./routes/authRoutes");     // ← Auth: register / login / me
+const courseRoutes = require("./routes/courseRoutes");   // ← Courses: create / list / detail
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -29,6 +31,8 @@ app.use(cors());
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.use("/api/health", healthRoute);
+app.use("/api/auth", authRoutes);
+app.use("/api/courses", courseRoutes);   
 
 // Add future route modules here, e.g.:
 // app.use("/api/users",    require("./routes/userRoutes"));
@@ -45,5 +49,5 @@ app.use(errorHandler);
 // ─── Start Server ─────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
