@@ -1,6 +1,12 @@
 const Course = require("../models/Course");
 const Video = require("../models/Video");
 const AppError = require("../utils/AppError");
+const {
+  extractPlaylistId,
+  fetchPlaylistTitle,
+  fetchPlaylistItems,
+  fetchVideoDurations,
+} = require("../utils/youtubeHelpers");
 
 // ─── Create Manual Course ─────────────────────────────────────────────────────
 
@@ -139,4 +145,88 @@ const getCourseById = async (req, res, next) => {
   }
 };
 
-module.exports = { createManualCourse, getCourses, getCourseById };
+
+// ─── Import YouTube Playlist ──────────────────────────────────────────────────
+
+/**
+ * @route   POST /api/courses/youtube
+ * @desc    Create a course by importing a YouTube playlist
+ * @access  Protected
+ *
+ * Body: {
+ *   playlistUrl : string    (required) — full YouTube playlist URL
+ *   tags        : string[]  (optional)
+ * }
+ */
+const importYoutubeCourse = async (req, res, next) => {
+  try {
+    const { playlistUrl, tags = [] } = req.body;
+    const userId = req.userId;
+
+    // ── 1. Validate input ─────────────────────────────────────────────────────
+
+    if (!playlistUrl || typeof playlistUrl !== "string") {
+      return next(new AppError("playlistUrl is required.", 400));
+    }
+
+    // ── 2. Extract playlist ID from URL ───────────────────────────────────────
+
+    const playlistId = extractPlaylistId(playlistUrl);
+
+    // ── 3. Fetch playlist title + all video entries (paginated) ───────────────
+
+    const [playlistTitle, { items }] = await Promise.all([
+      fetchPlaylistTitle(playlistId),
+      fetchPlaylistItems(playlistId),
+    ]);
+
+    if (items.length === 0) {
+      return next(new AppError("This playlist is empty or all videos are private/deleted.", 400));
+    }
+
+    // ── 4. Fetch durations for every video in one or more batched API calls ───
+
+    const videoIds    = items.map((v) => v.videoId);
+    const durationMap = await fetchVideoDurations(videoIds);
+
+    // ── 5. Compute aggregate totals ───────────────────────────────────────────
+
+    const totalVideos   = items.length;
+    const totalDuration = items.reduce(
+      (sum, v) => sum + (durationMap[v.videoId] || 0),
+      0
+    );
+
+    // ── 6. Create Course document ─────────────────────────────────────────────
+
+    const course = await Course.create({
+      userId,
+      title:        playlistTitle,
+      source:       "youtube",
+      playlistUrl,
+      tags,
+      totalVideos,
+      totalDuration,
+    });
+
+    // ── 7. Build and bulk-insert Video documents ──────────────────────────────
+
+    const videoDocs = items.map((v, index) => ({
+      courseId:   course._id,
+      title:      v.title,
+      videoUrl:   `https://www.youtube.com/watch?v=${v.videoId}`,
+      duration:   durationMap[v.videoId] || 0,
+      orderIndex: index,
+    }));
+
+    const createdVideos = await Video.insertMany(videoDocs);
+
+    // ── 8. Respond ────────────────────────────────────────────────────────────
+
+    res.status(201).json({ course, videos: createdVideos });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { createManualCourse, getCourses, getCourseById, importYoutubeCourse };
