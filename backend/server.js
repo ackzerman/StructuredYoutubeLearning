@@ -8,6 +8,7 @@ const connectDB = require("./config/db");
 const healthRoute = require("./routes/healthRoute");
 const authRoutes   = require("./routes/authRoutes");     // ← Auth: register / login / me
 const courseRoutes = require("./routes/courseRoutes");   // ← Courses: create / list / detail
+const progressRoutes = require("./routes/progressRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -33,6 +34,7 @@ app.use(cors());
 app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);   
+app.use("/api/progress", progressRoutes);  
 
 // Add future route modules here, e.g.:
 // app.use("/api/users",    require("./routes/userRoutes"));

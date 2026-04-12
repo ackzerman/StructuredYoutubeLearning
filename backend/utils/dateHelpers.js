@@ -1,0 +1,85 @@
+/**
+ * dateHelpers.js
+ * Utility functions for date formatting and streak calculations.
+ * All dates are handled as plain YYYY-MM-DD strings to avoid
+ * timezone drift that would occur when using Date objects directly.
+ */
+
+// ─── Get Today's Date String ──────────────────────────────────────────────────
+
+/**
+ * Returns today's date as a YYYY-MM-DD string in UTC.
+ * Using UTC keeps dates consistent regardless of the server's timezone.
+ *
+ * @returns {string}  e.g. "2024-07-15"
+ */
+const getTodayString = () => {
+  return new Date().toISOString().slice(0, 10);
+};
+
+// ─── Get Yesterday's Date String ─────────────────────────────────────────────
+
+/**
+ * Returns yesterday's date as a YYYY-MM-DD string in UTC.
+ *
+ * @returns {string}  e.g. "2024-07-14"
+ */
+const getYesterdayString = () => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+};
+
+// ─── Convert Date → YYYY-MM-DD String ────────────────────────────────────────
+
+/**
+ * Normalises any Date object or ISO string into a YYYY-MM-DD string in UTC.
+ *
+ * @param   {Date|string} date
+ * @returns {string}
+ */
+const toDateString = (date) => {
+  return new Date(date).toISOString().slice(0, 10);
+};
+
+// ─── Calculate New Streak ─────────────────────────────────────────────────────
+
+/**
+ * Determines the updated streak count based on the user's last active date.
+ *
+ * Rules:
+ *   - Same day as today    → no change (already counted)
+ *   - Yesterday            → continue streak (increment by 1)
+ *   - Any other date / null → reset to 1 (streak broken)
+ *
+ * @param   {Date|string|null} lastActiveDate  — stored on the User document
+ * @param   {number}           currentStreak   — current streak value
+ * @returns {{ newStreak: number, shouldUpdate: boolean }}
+ *            shouldUpdate = false when the user already logged activity today
+ */
+const calculateStreak = (lastActiveDate, currentStreak) => {
+  const today     = getTodayString();
+  const yesterday = getYesterdayString();
+
+  // No last active date means this is the user's very first activity
+  if (!lastActiveDate) {
+    return { newStreak: 1, shouldUpdate: true };
+  }
+
+  const lastDate = toDateString(lastActiveDate);
+
+  if (lastDate === today) {
+    // Already active today — don't double-count
+    return { newStreak: currentStreak, shouldUpdate: false };
+  }
+
+  if (lastDate === yesterday) {
+    // Consecutive day — extend the streak
+    return { newStreak: currentStreak + 1, shouldUpdate: true };
+  }
+
+  // Gap of 2+ days — streak is broken, restart at 1
+  return { newStreak: 1, shouldUpdate: true };
+};
+
+module.exports = { getTodayString, getYesterdayString, toDateString, calculateStreak };
