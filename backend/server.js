@@ -10,7 +10,8 @@ const authRoutes   = require("./routes/authRoutes");     // ← Auth: register /
 const courseRoutes = require("./routes/courseRoutes");   // ← Courses: create / list / detail
 const progressRoutes = require("./routes/progressRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes"); 
-const analyticsRoutes  = require("./routes/analyticsRoutes");    
+const analyticsRoutes  = require("./routes/analyticsRoutes");   
+const notesRoutes  = require("./routes/notesRoutes");     // ← Notes: save + fetch per video 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -39,6 +40,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/progress", progressRoutes);  
 app.use("/api/dashboard", dashboardRoutes); 
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/notes", notesRoutes);
 
 // Add future route modules here, e.g.:
 // app.use("/api/users",    require("./routes/userRoutes"));

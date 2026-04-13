@@ -1,5 +1,7 @@
 const Course = require("../models/Course");
 const Video = require("../models/Video");
+const Progress  = require("../models/Progress");
+const Note      = require("../models/Note");
 const AppError = require("../utils/AppError");
 const {
   extractPlaylistId,
@@ -229,4 +231,116 @@ const importYoutubeCourse = async (req, res, next) => {
   }
 };
 
-module.exports = { createManualCourse, getCourses, getCourseById, importYoutubeCourse };
+
+// ─── Get Course Detail ────────────────────────────────────────────────────────
+ 
+/**
+ * @route   GET /api/courses/:id/details
+ * @desc    Returns full course detail — videos merged with per-video progress
+ *          and notes — plus computed completion stats.
+ *          Uses Maps for O(1) lookup instead of nested loops (no N+1 queries).
+ * @access  Protected
+ */
+const getCourseDetails = async (req, res, next) => {
+  try {
+    const userId   = req.userId;
+    const courseId = req.params.id;
+ 
+    // ── 1. Fetch course and verify ownership ──────────────────────────────────
+ 
+    const course = await Course.findById(courseId);
+ 
+    if (!course) {
+      return next(new AppError("Course not found.", 404));
+    }
+ 
+    if (course.userId.toString() !== userId.toString()) {
+      return next(new AppError("You are not authorised to access this course.", 403));
+    }
+ 
+    // ── 2. Fetch videos, progress, and notes in parallel ──────────────────────
+    // All three queries fire at the same time — no sequential waiting.
+ 
+    const videos = await Video.find({ courseId }).sort({ orderIndex: 1 });
+ 
+    const videoIds = videos.map((v) => v._id);
+ 
+    const [progressList, noteList] = await Promise.all([
+      Progress.find({ userId, videoId: { $in: videoIds } }),
+      Note.find({ userId, videoId: { $in: videoIds } }),
+    ]);
+ 
+    // ── 3. Build O(1) lookup Maps keyed by videoId string ─────────────────────
+    // Avoids scanning the full array for each video (no N+1 problem).
+ 
+    const progressMap = new Map(
+      progressList.map((p) => [p.videoId.toString(), p])
+    );
+ 
+    const noteMap = new Map(
+      noteList.map((n) => [n.videoId.toString(), n])
+    );
+ 
+    // ── 4. Merge video + progress + note into a single object per video ────────
+ 
+    const mergedVideos = videos.map((video) => {
+      const videoIdStr = video._id.toString();
+      const progress   = progressMap.get(videoIdStr);
+      const note       = noteMap.get(videoIdStr);
+ 
+      return {
+        videoId:    video._id,
+        title:      video.title,
+        videoUrl:   video.videoUrl,
+        duration:   video.duration,
+        orderIndex: video.orderIndex,
+        progress: {
+          watchedSeconds: progress?.watchedSeconds ?? 0,
+          completed:      progress?.completed      ?? false,
+          lastWatchedAt:  progress?.lastWatchedAt  ?? null,
+        },
+        note: {
+          content:   note?.content   ?? "",
+          updatedAt: note?.updatedAt ?? null,
+        },
+      };
+    });
+ 
+    // ── 5. Compute course-level stats from the merged data ─────────────────────
+ 
+    const totalVideos    = mergedVideos.length;
+    const completedVideos = mergedVideos.filter((v) => v.progress.completed).length;
+    const totalWatchTime  = mergedVideos.reduce(
+      (sum, v) => sum + v.progress.watchedSeconds, 0
+    );
+    const completionPercentage =
+      totalVideos > 0 ? Math.round((completedVideos / totalVideos) * 100) : 0;
+ 
+    // ── 6. Respond ────────────────────────────────────────────────────────────
+ 
+    res.status(200).json({
+      course: {
+        id:            course._id,
+        title:         course.title,
+        source:        course.source,
+        tags:          course.tags,
+        playlistUrl:   course.playlistUrl,
+        totalVideos:   course.totalVideos,
+        totalDuration: course.totalDuration,
+        createdAt:     course.createdAt,
+      },
+      stats: {
+        totalVideos,
+        completedVideos,
+        completionPercentage,
+        totalWatchTime,
+      },
+      videos: mergedVideos,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+ 
+module.exports = { createManualCourse, getCourses, getCourseById, importYoutubeCourse, getCourseDetails };
+ 
