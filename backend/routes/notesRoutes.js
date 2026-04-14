@@ -1,8 +1,8 @@
 const express = require("express");
 const router  = express.Router();
 
-const { saveNote, getNote } = require("../controllers/notesController");
-const { protect }           = require("../middleware/authMiddleware");
+const { saveNote, getNote, deleteNote } = require("../controllers/notesController");
+const { protect } = require("../middleware/authMiddleware");
 
 /**
  * Notes Routes
@@ -18,5 +18,7 @@ router.post("/", saveNote);
 
 // @route  GET  /api/notes/:videoId     — Fetch the note for a specific video
 router.get("/:videoId", getNote);
+
+router.delete("/:videoId", deleteNote);
 
 module.exports = router;

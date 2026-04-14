@@ -1,8 +1,9 @@
-const Course = require("../models/Course");
-const Video = require("../models/Video");
+const mongoose  = require("mongoose");
+const Course    = require("../models/Course");
+const Video     = require("../models/Video");
 const Progress  = require("../models/Progress");
 const Note      = require("../models/Note");
-const AppError = require("../utils/AppError");
+const AppError  = require("../utils/AppError");
 const {
   extractPlaylistId,
   fetchPlaylistTitle,
@@ -16,29 +17,18 @@ const {
  * @route   POST /api/courses/manual
  * @desc    Create a new course manually with a list of videos
  * @access  Protected
- *
- * Body: {
- *   title    : string         (required)
- *   tags     : string[]       (optional)
- *   videos   : [{ title: string, duration: number }]  (required, min 1)
- * }
  */
 const createManualCourse = async (req, res, next) => {
   try {
     const { title, tags = [], videos } = req.body;
     const userId = req.userId;
 
-    // ── 1. Input validation ───────────────────────────────────────────────────
-
     if (!title || typeof title !== "string" || title.trim() === "") {
       return next(new AppError("Course title is required.", 400));
     }
-
     if (!Array.isArray(videos) || videos.length === 0) {
       return next(new AppError("At least one video is required.", 400));
     }
-
-    // Validate each video entry before touching the DB
     for (let i = 0; i < videos.length; i++) {
       const v = videos[i];
       if (!v.title || typeof v.title !== "string" || v.title.trim() === "") {
@@ -49,60 +39,72 @@ const createManualCourse = async (req, res, next) => {
       }
     }
 
-    // ── 2. Derive aggregate fields ────────────────────────────────────────────
-
     const totalVideos   = videos.length;
     const totalDuration = videos.reduce((sum, v) => sum + v.duration, 0);
 
-    // ── 3. Create and persist the Course document ─────────────────────────────
-
     const course = await Course.create({
       userId,
-      title:         title.trim(),
-      source:        "manual",
+      title:        title.trim(),
+      source:       "manual",
       tags,
       totalVideos,
       totalDuration,
     });
 
-    // ── 4. Create all Video documents in one bulk insert ──────────────────────
-
     const videoDocs = videos.map((v, index) => ({
       courseId:   course._id,
       title:      v.title.trim(),
       duration:   v.duration,
-      orderIndex: index,          // 0-based position in the playlist
-      videoUrl:   v.videoUrl || "", // optional for manual courses
+      orderIndex: index,
+      videoUrl:   v.videoUrl || "",
     }));
 
     const createdVideos = await Video.insertMany(videoDocs);
 
-    // ── 5. Respond ────────────────────────────────────────────────────────────
-
-    res.status(201).json({
-      course,
-      videos: createdVideos,
-    });
+    res.status(201).json({ course, videos: createdVideos });
   } catch (err) {
     next(err);
   }
 };
 
-// ─── Get All Courses ──────────────────────────────────────────────────────────
+// ─── Get All Courses (with pagination) ───────────────────────────────────────
 
 /**
- * @route   GET /api/courses
- * @desc    Fetch all courses belonging to the authenticated user
+ * @route   GET /api/courses?page=1&limit=10
+ * @desc    Fetch all courses for the authenticated user with pagination
  * @access  Protected
  */
 const getCourses = async (req, res, next) => {
   try {
     const userId = req.userId;
 
-    // Sort newest first so the dashboard shows recent courses at the top
-    const courses = await Course.find({ userId }).sort({ createdAt: -1 });
+    // Parse pagination params — default page 1, limit 10, max limit 50
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip  = (page - 1) * limit;
 
-    res.status(200).json({ courses });
+    // Run count and fetch in parallel for efficiency
+    const [total, courses] = await Promise.all([
+      Course.countDocuments({ userId }),
+      Course.find({ userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      courses,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -113,33 +115,22 @@ const getCourses = async (req, res, next) => {
 /**
  * @route   GET /api/courses/:id
  * @desc    Fetch a single course with all its videos
- * @access  Protected — only the course owner can access it
+ * @access  Protected — owner only
  */
 const getCourseById = async (req, res, next) => {
   try {
     const userId   = req.userId;
     const courseId = req.params.id;
 
-    // ── 1. Find the course ────────────────────────────────────────────────────
-
     const course = await Course.findById(courseId);
-
     if (!course) {
       return next(new AppError("Course not found.", 404));
     }
-
-    // ── 2. Ownership check — prevent users accessing each other's courses ─────
-
-    // Compare as strings because one is an ObjectId and one is a JWT string
     if (course.userId.toString() !== userId.toString()) {
       return next(new AppError("You are not authorised to access this course.", 403));
     }
 
-    // ── 3. Fetch videos ordered by their position in the playlist ─────────────
-
     const videos = await Video.find({ courseId }).sort({ orderIndex: 1 });
-
-    // ── 4. Respond ────────────────────────────────────────────────────────────
 
     res.status(200).json({ course, videos });
   } catch (err) {
@@ -147,6 +138,237 @@ const getCourseById = async (req, res, next) => {
   }
 };
 
+// ─── Update Course ────────────────────────────────────────────────────────────
+
+/**
+ * @route   PATCH /api/courses/:id
+ * @desc    Update a course's title and/or tags
+ * @access  Protected — owner only
+ *
+ * Body: {
+ *   title : string    (optional)
+ *   tags  : string[]  (optional)
+ * }
+ */
+const updateCourse = async (req, res, next) => {
+  try {
+    const userId   = req.userId;
+    const courseId = req.params.id;
+    const { title, tags } = req.body;
+
+    // ── 1. Find and authorise ─────────────────────────────────────────────────
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return next(new AppError("Course not found.", 404));
+    }
+    if (course.userId.toString() !== userId.toString()) {
+      return next(new AppError("You are not authorised to update this course.", 403));
+    }
+
+    // ── 2. Validate and apply changes ─────────────────────────────────────────
+
+    if (title !== undefined) {
+      if (typeof title !== "string" || title.trim() === "") {
+        return next(new AppError("Title must be a non-empty string.", 400));
+      }
+      course.title = title.trim();
+    }
+
+    if (tags !== undefined) {
+      if (!Array.isArray(tags)) {
+        return next(new AppError("Tags must be an array.", 400));
+      }
+      course.tags = tags;
+    }
+
+    await course.save();
+
+    res.status(200).json({ course });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Delete Course ────────────────────────────────────────────────────────────
+
+/**
+ * @route   DELETE /api/courses/:id
+ * @desc    Delete a course and cascade-delete all associated videos,
+ *          progress records, and notes.
+ * @access  Protected — owner only
+ */
+const deleteCourse = async (req, res, next) => {
+  try {
+    const userId   = req.userId;
+    const courseId = req.params.id;
+
+    // ── 1. Find and authorise ─────────────────────────────────────────────────
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return next(new AppError("Course not found.", 404));
+    }
+    if (course.userId.toString() !== userId.toString()) {
+      return next(new AppError("You are not authorised to delete this course.", 403));
+    }
+
+    // ── 2. Collect all video IDs belonging to this course ─────────────────────
+
+    const videos   = await Video.find({ courseId }).select("_id");
+    const videoIds = videos.map((v) => v._id);
+
+    // ── 3. Cascade delete — all related data removed in parallel ──────────────
+    // Order: child records first, then videos, then the course itself.
+
+    await Promise.all([
+      Progress.deleteMany({ videoId: { $in: videoIds } }),
+      Note.deleteMany({     videoId: { $in: videoIds } }),
+    ]);
+
+    await Video.deleteMany({ courseId });
+    await Course.findByIdAndDelete(courseId);
+
+    res.status(200).json({ message: "Course and all associated data deleted successfully." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Add Video to Manual Course ───────────────────────────────────────────────
+
+/**
+ * @route   POST /api/courses/:id/videos
+ * @desc    Append a new video to an existing manual course.
+ *          YouTube courses are immutable — their videos come from the playlist.
+ * @access  Protected — owner only
+ *
+ * Body: {
+ *   title    : string  (required)
+ *   duration : number  (required, seconds)
+ *   videoUrl : string  (optional)
+ * }
+ */
+const addVideo = async (req, res, next) => {
+  try {
+    const userId   = req.userId;
+    const courseId = req.params.id;
+    const { title, duration, videoUrl = "" } = req.body;
+
+    // ── 1. Find and authorise ─────────────────────────────────────────────────
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return next(new AppError("Course not found.", 404));
+    }
+    if (course.userId.toString() !== userId.toString()) {
+      return next(new AppError("You are not authorised to modify this course.", 403));
+    }
+    if (course.source !== "manual") {
+      return next(new AppError("Videos can only be added to manual courses.", 400));
+    }
+
+    // ── 2. Validate input ─────────────────────────────────────────────────────
+
+    if (!title || typeof title !== "string" || title.trim() === "") {
+      return next(new AppError("Video title is required.", 400));
+    }
+    if (typeof duration !== "number" || duration <= 0) {
+      return next(new AppError("Video duration must be a positive number (seconds).", 400));
+    }
+
+    // ── 3. Determine next orderIndex ──────────────────────────────────────────
+    // Find the highest existing orderIndex and increment by 1.
+
+    const lastVideo = await Video.findOne({ courseId }).sort({ orderIndex: -1 }).select("orderIndex");
+    const orderIndex = lastVideo ? lastVideo.orderIndex + 1 : 0;
+
+    // ── 4. Create the video ───────────────────────────────────────────────────
+
+    const video = await Video.create({
+      courseId,
+      title:    title.trim(),
+      duration,
+      videoUrl,
+      orderIndex,
+    });
+
+    // ── 5. Update course aggregate totals ─────────────────────────────────────
+
+    course.totalVideos   += 1;
+    course.totalDuration += duration;
+    await course.save();
+
+    res.status(201).json({ video, course });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Remove Video from Manual Course ─────────────────────────────────────────
+
+/**
+ * @route   DELETE /api/courses/:id/videos/:videoId
+ * @desc    Remove a video from a manual course and cascade-delete its
+ *          progress and notes. Re-indexes remaining videos to keep
+ *          orderIndex values contiguous.
+ * @access  Protected — owner only
+ */
+const removeVideo = async (req, res, next) => {
+  try {
+    const userId        = req.userId;
+    const courseId      = req.params.id;
+    const { videoId }   = req.params;
+
+    // ── 1. Find and authorise ─────────────────────────────────────────────────
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return next(new AppError("Course not found.", 404));
+    }
+    if (course.userId.toString() !== userId.toString()) {
+      return next(new AppError("You are not authorised to modify this course.", 403));
+    }
+    if (course.source !== "manual") {
+      return next(new AppError("Videos can only be removed from manual courses.", 400));
+    }
+
+    // ── 2. Find the video ─────────────────────────────────────────────────────
+
+    const video = await Video.findOne({ _id: videoId, courseId });
+    if (!video) {
+      return next(new AppError("Video not found in this course.", 404));
+    }
+
+    // ── 3. Cascade delete progress and notes for this video ───────────────────
+
+    await Promise.all([
+      Progress.deleteMany({ videoId: video._id }),
+      Note.deleteMany({     videoId: video._id }),
+    ]);
+
+    await Video.findByIdAndDelete(videoId);
+
+    // ── 4. Re-index remaining videos so orderIndex stays contiguous ───────────
+
+    const remaining = await Video.find({ courseId }).sort({ orderIndex: 1 });
+    await Promise.all(
+      remaining.map((v, idx) =>
+        Video.findByIdAndUpdate(v._id, { orderIndex: idx })
+      )
+    );
+
+    // ── 5. Update course aggregate totals ─────────────────────────────────────
+
+    course.totalVideos   = Math.max(0, course.totalVideos - 1);
+    course.totalDuration = Math.max(0, course.totalDuration - video.duration);
+    await course.save();
+
+    res.status(200).json({ message: "Video removed successfully.", course });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // ─── Import YouTube Playlist ──────────────────────────────────────────────────
 
@@ -154,28 +376,17 @@ const getCourseById = async (req, res, next) => {
  * @route   POST /api/courses/youtube
  * @desc    Create a course by importing a YouTube playlist
  * @access  Protected
- *
- * Body: {
- *   playlistUrl : string    (required) — full YouTube playlist URL
- *   tags        : string[]  (optional)
- * }
  */
 const importYoutubeCourse = async (req, res, next) => {
   try {
     const { playlistUrl, tags = [] } = req.body;
     const userId = req.userId;
 
-    // ── 1. Validate input ─────────────────────────────────────────────────────
-
     if (!playlistUrl || typeof playlistUrl !== "string") {
       return next(new AppError("playlistUrl is required.", 400));
     }
 
-    // ── 2. Extract playlist ID from URL ───────────────────────────────────────
-
     const playlistId = extractPlaylistId(playlistUrl);
-
-    // ── 3. Fetch playlist title + all video entries (paginated) ───────────────
 
     const [playlistTitle, { items }] = await Promise.all([
       fetchPlaylistTitle(playlistId),
@@ -186,20 +397,11 @@ const importYoutubeCourse = async (req, res, next) => {
       return next(new AppError("This playlist is empty or all videos are private/deleted.", 400));
     }
 
-    // ── 4. Fetch durations for every video in one or more batched API calls ───
-
     const videoIds    = items.map((v) => v.videoId);
     const durationMap = await fetchVideoDurations(videoIds);
 
-    // ── 5. Compute aggregate totals ───────────────────────────────────────────
-
     const totalVideos   = items.length;
-    const totalDuration = items.reduce(
-      (sum, v) => sum + (durationMap[v.videoId] || 0),
-      0
-    );
-
-    // ── 6. Create Course document ─────────────────────────────────────────────
+    const totalDuration = items.reduce((sum, v) => sum + (durationMap[v.videoId] || 0), 0);
 
     const course = await Course.create({
       userId,
@@ -211,8 +413,6 @@ const importYoutubeCourse = async (req, res, next) => {
       totalDuration,
     });
 
-    // ── 7. Build and bulk-insert Video documents ──────────────────────────────
-
     const videoDocs = items.map((v, index) => ({
       courseId:   course._id,
       title:      v.title,
@@ -223,71 +423,47 @@ const importYoutubeCourse = async (req, res, next) => {
 
     const createdVideos = await Video.insertMany(videoDocs);
 
-    // ── 8. Respond ────────────────────────────────────────────────────────────
-
     res.status(201).json({ course, videos: createdVideos });
   } catch (err) {
     next(err);
   }
 };
 
-
 // ─── Get Course Detail ────────────────────────────────────────────────────────
- 
+
 /**
  * @route   GET /api/courses/:id/details
- * @desc    Returns full course detail — videos merged with per-video progress
- *          and notes — plus computed completion stats.
- *          Uses Maps for O(1) lookup instead of nested loops (no N+1 queries).
+ * @desc    Full course detail with per-video progress and notes merged in
  * @access  Protected
  */
 const getCourseDetails = async (req, res, next) => {
   try {
     const userId   = req.userId;
     const courseId = req.params.id;
- 
-    // ── 1. Fetch course and verify ownership ──────────────────────────────────
- 
+
     const course = await Course.findById(courseId);
- 
     if (!course) {
       return next(new AppError("Course not found.", 404));
     }
- 
     if (course.userId.toString() !== userId.toString()) {
       return next(new AppError("You are not authorised to access this course.", 403));
     }
- 
-    // ── 2. Fetch videos, progress, and notes in parallel ──────────────────────
-    // All three queries fire at the same time — no sequential waiting.
- 
-    const videos = await Video.find({ courseId }).sort({ orderIndex: 1 });
- 
+
+    const videos   = await Video.find({ courseId }).sort({ orderIndex: 1 });
     const videoIds = videos.map((v) => v._id);
- 
+
     const [progressList, noteList] = await Promise.all([
       Progress.find({ userId, videoId: { $in: videoIds } }),
-      Note.find({ userId, videoId: { $in: videoIds } }),
+      Note.find({     userId, videoId: { $in: videoIds } }),
     ]);
- 
-    // ── 3. Build O(1) lookup Maps keyed by videoId string ─────────────────────
-    // Avoids scanning the full array for each video (no N+1 problem).
- 
-    const progressMap = new Map(
-      progressList.map((p) => [p.videoId.toString(), p])
-    );
- 
-    const noteMap = new Map(
-      noteList.map((n) => [n.videoId.toString(), n])
-    );
- 
-    // ── 4. Merge video + progress + note into a single object per video ────────
- 
+
+    const progressMap = new Map(progressList.map((p) => [p.videoId.toString(), p]));
+    const noteMap     = new Map(noteList.map((n)     => [n.videoId.toString(), n]));
+
     const mergedVideos = videos.map((video) => {
-      const videoIdStr = video._id.toString();
-      const progress   = progressMap.get(videoIdStr);
-      const note       = noteMap.get(videoIdStr);
- 
+      const id       = video._id.toString();
+      const progress = progressMap.get(id);
+      const note     = noteMap.get(id);
       return {
         videoId:    video._id,
         title:      video.title,
@@ -305,19 +481,12 @@ const getCourseDetails = async (req, res, next) => {
         },
       };
     });
- 
-    // ── 5. Compute course-level stats from the merged data ─────────────────────
- 
-    const totalVideos    = mergedVideos.length;
-    const completedVideos = mergedVideos.filter((v) => v.progress.completed).length;
-    const totalWatchTime  = mergedVideos.reduce(
-      (sum, v) => sum + v.progress.watchedSeconds, 0
-    );
-    const completionPercentage =
-      totalVideos > 0 ? Math.round((completedVideos / totalVideos) * 100) : 0;
- 
-    // ── 6. Respond ────────────────────────────────────────────────────────────
- 
+
+    const totalVideos         = mergedVideos.length;
+    const completedVideos     = mergedVideos.filter((v) => v.progress.completed).length;
+    const totalWatchTime      = mergedVideos.reduce((sum, v) => sum + v.progress.watchedSeconds, 0);
+    const completionPercentage = totalVideos > 0 ? Math.round((completedVideos / totalVideos) * 100) : 0;
+
     res.status(200).json({
       course: {
         id:            course._id,
@@ -329,18 +498,22 @@ const getCourseDetails = async (req, res, next) => {
         totalDuration: course.totalDuration,
         createdAt:     course.createdAt,
       },
-      stats: {
-        totalVideos,
-        completedVideos,
-        completionPercentage,
-        totalWatchTime,
-      },
+      stats: { totalVideos, completedVideos, completionPercentage, totalWatchTime },
       videos: mergedVideos,
     });
   } catch (err) {
     next(err);
   }
 };
- 
-module.exports = { createManualCourse, getCourses, getCourseById, importYoutubeCourse, getCourseDetails };
- 
+
+module.exports = {
+  createManualCourse,
+  getCourses,
+  getCourseById,
+  updateCourse,
+  deleteCourse,
+  addVideo,
+  removeVideo,
+  importYoutubeCourse,
+  getCourseDetails,
+};

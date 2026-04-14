@@ -5,6 +5,10 @@ const {
   createManualCourse,
   getCourses,
   getCourseById,
+  updateCourse,
+  deleteCourse,
+  addVideo,
+  removeVideo,
   importYoutubeCourse,
   getCourseDetails,
 } = require("../controllers/courseController");
@@ -34,5 +38,19 @@ router.get("/:id/details", getCourseDetails);
 
 // @route  GET  /api/courses/:id     — Get a single course with its videos
 router.get("/:id", getCourseById);
+
+// @route  PATCH /api/courses/:id          — Update title and/or tags
+router.patch("/:id", updateCourse);
+ 
+// @route  DELETE /api/courses/:id         — Delete course + cascade
+router.delete("/:id", deleteCourse);
+ 
+// ── Video Management (manual courses only) ────────────────────────────────────
+ 
+// @route  POST   /api/courses/:id/videos            — Add a video
+router.post("/:id/videos", addVideo);
+ 
+// @route  DELETE /api/courses/:id/videos/:videoId   — Remove a video
+router.delete("/:id/videos/:videoId", removeVideo);
 
 module.exports = router;

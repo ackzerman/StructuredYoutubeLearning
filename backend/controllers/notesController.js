@@ -68,9 +68,9 @@ const saveNote = async (req, res, next) => {
         },
       },
       {
-        upsert:              true,   // create if it doesn't exist
-        new:                 true,   // return the updated/created document
-        runValidators:       true,   // apply schema validators on update
+        upsert: true,   // create if it doesn't exist
+        new: true,   // return the updated/created document
+        runValidators: true,   // apply schema validators on update
         setDefaultsOnInsert: true,   // apply schema defaults on insert
       }
     );
@@ -138,4 +138,37 @@ const getNote = async (req, res, next) => {
   }
 };
 
-module.exports = { saveNote, getNote };
+
+// ─── Delete Note ──────────────────────────────────────────────────────────────
+ 
+/**
+ * @route   DELETE /api/notes/:videoId
+ * @desc    Permanently delete the user's note for a video.
+ * @access  Protected
+ */
+const deleteNote = async (req, res, next) => {
+  try {
+    const userId      = req.userId;
+    const { videoId } = req.params;
+ 
+    if (!mongoose.Types.ObjectId.isValid(videoId)) {
+      return next(new AppError("Invalid videoId.", 400));
+    }
+ 
+    const userObjId  = new mongoose.Types.ObjectId(userId);
+    const videoObjId = new mongoose.Types.ObjectId(videoId);
+ 
+    const note = await Note.findOneAndDelete({ userId: userObjId, videoId: videoObjId });
+ 
+    if (!note) {
+      return next(new AppError("Note not found.", 404));
+    }
+ 
+    res.status(200).json({ message: "Note deleted successfully." });
+  } catch (err) {
+    next(err);
+  }
+};
+ 
+
+module.exports = { saveNote, getNote, deleteNote };
