@@ -44,6 +44,12 @@ const userSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // Highest streak the user has ever achieved — never decreases
+    maxStreak: {
+      type: Number,
+      default: 0,
+    },
+
     // Used alongside DailyActivity to compute and update the streak
     lastActiveDate: {
       type: Date,

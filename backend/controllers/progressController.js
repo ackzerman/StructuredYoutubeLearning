@@ -51,6 +51,11 @@ const updateProgress = async (req, res, next) => {
       progress = new Progress({ userId, videoId, watchedSeconds: 0, completed: false });
     }
 
+    // Capture original lastWatchedAt before we overwrite it (needed for DailyActivity logic)
+    const previousLastWatchedDate = !isNewProgress && progress.lastWatchedAt
+      ? new Date(progress.lastWatchedAt).toISOString().slice(0, 10)
+      : null;
+
     // ── 4. Calculate the delta before updating ────────────────────────────────
     // Delta = how many NEW seconds were watched since the last call.
     // This prevents double-counting when the client sends the same position twice.
@@ -76,18 +81,23 @@ const updateProgress = async (req, res, next) => {
     await progress.save();
 
     // ── 6. Update DailyActivity ───────────────────────────────────────────────
-    // Only record activity when there are genuinely new seconds watched.
+    // Record activity when there are genuinely new seconds watched, or
+    // when a video is touched for the first time today.
 
     const today = getTodayString();
 
-    if (deltaSeconds > 0 || isNewProgress) {
+    // Determine if this is the first progress update for this video today.
+    // Uses the original lastWatchedAt captured before we updated it.
+    const isFirstWatchToday = isNewProgress || previousLastWatchedDate !== today;
+
+    if (deltaSeconds > 0 || isFirstWatchToday) {
       // findOneAndUpdate with upsert avoids race conditions and duplicate docs.
       // $inc atomically increments both counters in a single DB operation.
       await DailyActivity.findOneAndUpdate(
         { userId, date: today },
         {
           $inc: {
-            videosWatchedCount: isNewProgress ? 1 : 0, // Count each video once per day
+            videosWatchedCount: isFirstWatchToday ? 1 : 0, // Count each video once per day
             totalWatchSeconds:  deltaSeconds,
           },
         },
@@ -103,6 +113,10 @@ const updateProgress = async (req, res, next) => {
     if (shouldUpdate) {
       user.streak         = newStreak;
       user.lastActiveDate = new Date();
+
+      if (newStreak > (user.maxStreak ?? 0)) {
+        user.maxStreak = newStreak;
+      }
       await user.save();
     }
 
@@ -118,4 +132,46 @@ const updateProgress = async (req, res, next) => {
   }
 };
 
-module.exports = { updateProgress };
+// ─── Toggle Star ──────────────────────────────────────────────────────────────
+ 
+/**
+ * @route   PATCH /api/progress/:videoId/star
+ * @desc    Toggle the starred flag on a user's progress record for a video.
+ *          Creates a minimal Progress record if one doesn't exist yet
+ *          (user can star a video before watching it).
+ * @access  Protected
+ */
+async function toggleStar(req, res, next) {
+  try {
+    const userId  = req.userId;
+    const { videoId } = req.params;
+ 
+    // Validate the video exists
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return next(new AppError("Video not found.", 404));
+    }
+ 
+    // Find or create a progress record for this user + video
+    let progress = await Progress.findOne({ userId, videoId });
+ 
+    if (!progress) {
+      progress = await Progress.create({
+        userId,
+        videoId,
+        watchedSeconds: 0,
+        completed:      false,
+        starred:        true,   // first action is always starring
+      });
+    } else {
+      progress.starred = !progress.starred;
+      await progress.save();
+    }
+
+    res.status(200).json({ videoId, starred: progress.starred });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { updateProgress, toggleStar };

@@ -77,6 +77,7 @@ const createManualCourse = async (req, res, next) => {
 const getCourses = async (req, res, next) => {
   try {
     const userId = req.userId;
+    const userObjId = new mongoose.Types.ObjectId(userId);
 
     // Parse pagination params — default page 1, limit 10, max limit 50
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
@@ -86,10 +87,82 @@ const getCourses = async (req, res, next) => {
     // Run count and fetch in parallel for efficiency
     const [total, courses] = await Promise.all([
       Course.countDocuments({ userId }),
-      Course.find({ userId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
+
+            // Aggregation: join videos + completed progress to compute per-course stats
+      Course.aggregate([
+        { $match: { userId: userObjId } },
+        { $sort:  { createdAt: -1 } },
+        { $skip:  skip },
+        { $limit: limit },
+ 
+        // Join all videos belonging to the course
+        {
+          $lookup: {
+            from:         "videos",
+            localField:   "_id",
+            foreignField: "courseId",
+            as:           "videos",
+          },
+        },
+ 
+        // Join only the completed progress records for this user in this course
+        {
+          $lookup: {
+            from: "progresses",
+            let:  { videoIds: "$videos._id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $in: ["$videoId",   "$$videoIds"] },
+                      { $eq: ["$userId",    userObjId]    },
+                      { $eq: ["$completed", true]         },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "completedProgress",
+          },
+        },
+ 
+        // Project the final shape — mirrors raw Course fields plus progress stats
+        {
+          $project: {
+            _id:                  1,
+            title:                1,
+            source:               1,
+            tags:                 1,
+            playlistUrl:          1,
+            thumbnailUrl:         1,
+            // Fallback: first video's URL for deriving thumbnail client-side
+            firstVideoUrl:        { $arrayElemAt: ["$videos.videoUrl", 0] },
+            totalVideos:          1,
+            totalDuration:        1,
+            createdAt:            1,
+            updatedAt:            1,
+            completedVideos:      { $size: "$completedProgress" },
+            completionPercentage: {
+              $cond: [
+                { $gt: [{ $size: "$videos" }, 0] },
+                {
+                  $round: [
+                    {
+                      $multiply: [
+                        { $divide: [{ $size: "$completedProgress" }, { $size: "$videos" }] },
+                        100,
+                      ],
+                    },
+                    0,
+                  ],
+                },
+                0,
+              ],
+            },
+          },
+        },
+      ])
     ]);
 
     const totalPages = Math.ceil(total / limit);
@@ -408,17 +481,19 @@ const importYoutubeCourse = async (req, res, next) => {
       title:        playlistTitle,
       source:       "youtube",
       playlistUrl,
+      thumbnailUrl: items[0]?.thumbnailUrl || null,
       tags,
       totalVideos,
       totalDuration,
     });
 
     const videoDocs = items.map((v, index) => ({
-      courseId:   course._id,
-      title:      v.title,
-      videoUrl:   `https://www.youtube.com/watch?v=${v.videoId}`,
-      duration:   durationMap[v.videoId] || 0,
-      orderIndex: index,
+      courseId:      course._id,
+      title:        v.title,
+      videoUrl:     `https://www.youtube.com/watch?v=${v.videoId}`,
+      thumbnailUrl: v.thumbnailUrl || `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`,
+      duration:     durationMap[v.videoId] || 0,
+      orderIndex:   index,
     }));
 
     const createdVideos = await Video.insertMany(videoDocs);
@@ -465,15 +540,17 @@ const getCourseDetails = async (req, res, next) => {
       const progress = progressMap.get(id);
       const note     = noteMap.get(id);
       return {
-        videoId:    video._id,
-        title:      video.title,
-        videoUrl:   video.videoUrl,
-        duration:   video.duration,
-        orderIndex: video.orderIndex,
+        videoId:      video._id,
+        title:        video.title,
+        videoUrl:     video.videoUrl,
+        thumbnailUrl: video.thumbnailUrl || "",
+        duration:     video.duration,
+        orderIndex:   video.orderIndex,
         progress: {
           watchedSeconds: progress?.watchedSeconds ?? 0,
           completed:      progress?.completed      ?? false,
           lastWatchedAt:  progress?.lastWatchedAt  ?? null,
+          starred:        progress?.starred        ?? false,
         },
         note: {
           content:   note?.content   ?? "",
@@ -494,6 +571,8 @@ const getCourseDetails = async (req, res, next) => {
         source:        course.source,
         tags:          course.tags,
         playlistUrl:   course.playlistUrl,
+        thumbnailUrl:  course.thumbnailUrl,
+        firstVideoUrl: videos[0]?.videoUrl || null,
         totalVideos:   course.totalVideos,
         totalDuration: course.totalDuration,
         createdAt:     course.createdAt,

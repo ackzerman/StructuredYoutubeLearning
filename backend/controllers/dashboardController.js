@@ -35,24 +35,22 @@ const getDashboard = async (req, res, next) => {
       _getHeatmap(userObjId),
       _getContinueWatching(userObjId),
       _getRecentCourses(userObjId),
-      User.findById(userId).select("streak"),
+      User.findById(userId).select("streak maxStreak"),
     ]);
 
     // ── Compose response ──────────────────────────────────────────────────────
 
     const { totalVideos, videosWatched } = statsResult;
 
-    const completionPercentage =
-      totalVideos > 0
-        ? Math.round((videosWatched / totalVideos) * 100)
-        : 0;
+    const completionPercentage = totalVideos > 0 ? Math.round((videosWatched / totalVideos) * 100) : 0;
 
     res.status(200).json({
       stats: {
         totalVideos,
         videosWatched,
         completionPercentage,
-        streak: user?.streak ?? 0,
+        currentStreak: user?.streak ?? 0,
+        maxStreak: user?.maxStreak ?? 0,
       },
       heatmap,
       continueWatching,
@@ -110,38 +108,44 @@ const _getStats = async (userObjId) => {
 // ─── Helper: Heatmap ──────────────────────────────────────────────────────────
 
 /**
- * Returns an array of { date, count } objects for the last 30 days.
+ * Returns an array of { date, count } objects for the last 91 days (13 weeks).
  * Dates with no activity are filled with count: 0 so the frontend
- * heatmap always receives a complete, gap-free 30-day window.
+ * heatmap always receives a complete, gap-free 13-week window.
  *
  * @param   {ObjectId} userObjId
  * @returns {Promise<{ date: string, count: number }[]>}
  */
 const _getHeatmap = async (userObjId) => {
-  // Build the 30-day date window (inclusive of today)
+  // Build the 91-day (13-week) date window (inclusive of today)
+  const totalDays = 91;
   const dates = [];
-  for (let i = 29; i >= 0; i--) {
+  for (let i = totalDays - 1; i >= 0; i--) {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - i);
     dates.push(d.toISOString().slice(0, 10)); // "YYYY-MM-DD"
   }
 
-  const startDate = dates[0];   // 29 days ago
+  const startDate = dates[0];
   const endDate   = dates[dates.length - 1]; // today
 
   // Fetch only the records that exist in this window
   const records = await DailyActivity.find({
     userId: userObjId,
     date:   { $gte: startDate, $lte: endDate },
-  }).select("date videosWatchedCount");
+  }).select("date videosWatchedCount totalWatchSeconds");
 
   // Build a lookup map for O(1) access: { "2024-07-15": 3, ... }
+  // Use max(videosWatchedCount, 1) whenever there is any watch activity,
+  // so continuing a previously-started video still lights up the heatmap.
   const recordMap = {};
   for (const r of records) {
-    recordMap[r.date] = r.videosWatchedCount;
+    const hasActivity = r.totalWatchSeconds > 0 || r.videosWatchedCount > 0;
+    recordMap[r.date] = hasActivity
+      ? Math.max(r.videosWatchedCount, 1)
+      : 0;
   }
 
-  // Merge with the full 30-day window — missing dates get count: 0
+  // Merge with the full date window — missing dates get count: 0
   return dates.map((date) => ({
     date,
     count: recordMap[date] ?? 0,
@@ -210,6 +214,7 @@ const _getContinueWatching = async (userObjId) => {
         videoId:        "$video._id",
         videoTitle:     "$video.title",
         videoUrl:       "$video.videoUrl",
+        thumbnailUrl:   "$video.thumbnailUrl",
         courseId:       "$course._id",
         courseTitle:    "$course.title",
         watchedSeconds: 1,
@@ -285,6 +290,8 @@ const _getRecentCourses = async (userObjId) => {
         title:           1,
         source:          1,
         tags:            1,
+        thumbnailUrl:    1,
+        firstVideoUrl:   { $arrayElemAt: ["$videos.videoUrl", 0] },
         totalVideos:     { $size: "$videos" },
         completedVideos: { $size: "$completedProgress" },
         createdAt:       1,

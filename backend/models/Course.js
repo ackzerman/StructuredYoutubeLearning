@@ -41,6 +41,12 @@ const courseSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Thumbnail image URL (first video thumbnail for YouTube courses)
+    thumbnailUrl: {
+      type: String,
+      default: null,
+    },
+
     // Flexible labels for filtering/searching courses
     tags: {
       type: [String],

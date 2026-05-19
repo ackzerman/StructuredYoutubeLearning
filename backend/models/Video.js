@@ -31,6 +31,12 @@ const videoSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Thumbnail image URL for the video
+    thumbnailUrl: {
+      type: String,
+      default: "",
+    },
+
     // Length of the video in seconds
     duration: {
       type: Number,

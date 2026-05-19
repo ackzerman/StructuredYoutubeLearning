@@ -1,7 +1,7 @@
 const express = require("express");
 const router  = express.Router();
 
-const { updateProgress } = require("../controllers/progressController");
+const { updateProgress, toggleStar } = require("../controllers/progressController");
 const { protect }        = require("../middleware/authMiddleware");
 
 /**
@@ -11,5 +11,9 @@ const { protect }        = require("../middleware/authMiddleware");
 
 // @route  POST /api/progress — Record watch progress, update activity + streak
 router.post("/", protect, updateProgress);
+
+
+// @route  PATCH /api/progress/:videoId/star      — Toggle starred flag for a video
+router.patch("/:videoId/star", protect, toggleStar);
 
 module.exports = router;

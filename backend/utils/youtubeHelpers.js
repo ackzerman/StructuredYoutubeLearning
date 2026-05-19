@@ -109,7 +109,11 @@ const fetchPlaylistItems = async (playlistId) => {
         if (!playlistTitle && snippet.playlistTitle) {
           playlistTitle = snippet.playlistTitle;
         }
-        items.push({ videoId, title });
+        // Pick the best available thumbnail
+        const thumbs = snippet?.thumbnails || {};
+        const thumbnailUrl =
+          thumbs.medium?.url || thumbs.high?.url || thumbs.default?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        items.push({ videoId, title, thumbnailUrl });
       }
     }
 

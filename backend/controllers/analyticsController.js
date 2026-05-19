@@ -90,7 +90,7 @@ const getSummary = async (req, res, next) => {
  * @returns {Promise<{ date, videosWatched, totalSeconds }[]>}
  */
 const _getDailyBreakdown = async (userObjId) => {
-  return DailyActivity.aggregate([
+  const records = await DailyActivity.aggregate([
     { $match: { userId: userObjId } },
     { $sort:  { date: 1 } },
     {
@@ -102,7 +102,43 @@ const _getDailyBreakdown = async (userObjId) => {
       },
     },
   ]);
+
+   if (records.length === 0) return [];
+ 
+  // Build an O(1) lookup map from the DB results.
+  // Ensure any day with watch activity shows at least videosWatched=1,
+  // even when videosWatchedCount is 0 (user continued a previously-started video).
+  const recordMap = {};
+  for (const r of records) {
+    const hasActivity = r.totalSeconds > 0 || r.videosWatched > 0;
+    recordMap[r.date] = {
+      videosWatched: hasActivity ? Math.max(r.videosWatched, 1) : 0,
+      totalSeconds:  r.totalSeconds,
+    };
+  }
+
+  //Walk day-by-day from the earliest record to today, filling any gaps with zeros
+
+  const result  = [];
+  const cursor  = new Date(records[0].date);
+  const today   = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  cursor.setUTCHours(0, 0, 0, 0);
+ 
+  while (cursor <= today) {
+    const dateStr = cursor.toISOString().slice(0, 10);
+    result.push({
+      date:          dateStr,
+      videosWatched: recordMap[dateStr]?.videosWatched ?? 0,
+      totalSeconds:  recordMap[dateStr]?.totalSeconds  ?? 0,
+    });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+ 
+  return result;
 };
+
+
 
 // ─── Aggregation: Monthly ─────────────────────────────────────────────────────
 
@@ -123,11 +159,24 @@ const _getMonthlyBreakdown = async (userObjId) => {
   return DailyActivity.aggregate([
     { $match: { userId: userObjId } },
 
+    // Derive a corrected video count: at least 1 if there's any watch activity
+    {
+      $addFields: {
+        effectiveVideos: {
+          $cond: {
+            if: { $or: [{ $gt: ["$totalWatchSeconds", 0] }, { $gt: ["$videosWatchedCount", 0] }] },
+            then: { $max: ["$videosWatchedCount", 1] },
+            else: 0,
+          },
+        },
+      },
+    },
+
     // Extract "YYYY-MM" from the "YYYY-MM-DD" string
     {
       $group: {
         _id:          { $substr: ["$date", 0, 7] }, // "2024-07"
-        videosWatched: { $sum: "$videosWatchedCount" },
+        videosWatched: { $sum: "$effectiveVideos" },
         totalSeconds: { $sum: "$totalWatchSeconds" },
       },
     },
@@ -159,11 +208,24 @@ const _getYearlyBreakdown = async (userObjId) => {
   return DailyActivity.aggregate([
     { $match: { userId: userObjId } },
 
+    // Derive a corrected video count: at least 1 if there's any watch activity
+    {
+      $addFields: {
+        effectiveVideos: {
+          $cond: {
+            if: { $or: [{ $gt: ["$totalWatchSeconds", 0] }, { $gt: ["$videosWatchedCount", 0] }] },
+            then: { $max: ["$videosWatchedCount", 1] },
+            else: 0,
+          },
+        },
+      },
+    },
+
     // Extract "YYYY" from the "YYYY-MM-DD" string
     {
       $group: {
         _id:          { $substr: ["$date", 0, 4] }, // "2024"
-        videosWatched: { $sum: "$videosWatchedCount" },
+        videosWatched: { $sum: "$effectiveVideos" },
         totalSeconds: { $sum: "$totalWatchSeconds" },
       },
     },
@@ -224,10 +286,13 @@ const _resolveStartDate = (range, today) => {
  */
 const _fillDateGaps = (records, startDate, today) => {
   // Build O(1) lookup map from DB records
+  // Ensure any day with watch activity shows at least count=1,
+  // even when videosWatchedCount is 0 (user continued a previously-started video).
   const recordMap = {};
   for (const r of records) {
+    const hasActivity = r.totalWatchSeconds > 0 || r.videosWatchedCount > 0;
     recordMap[r.date] = {
-      count:        r.videosWatchedCount,
+      count:        hasActivity ? Math.max(r.videosWatchedCount, 1) : 0,
       totalSeconds: r.totalWatchSeconds,
     };
   }

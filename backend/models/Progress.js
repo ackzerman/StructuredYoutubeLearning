@@ -40,6 +40,12 @@ const progressSchema = new mongoose.Schema(
     lastWatchedAt: {
       type: Date,
     },
+
+    // Whether the user has starred this video as important
+    starred: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
