@@ -12,6 +12,7 @@ import CourseDetail from './pages/CourseDetail';
 import VideoPlayer  from './pages/VideoPlayer';
 import Analytics    from './pages/Analytics';
 import Profile      from './pages/Profile';
+import PlanYourDay  from './pages/PlanYourDay';
 
 /* ─── Protected layout ──────────────────────────────────────────────────── */
 function ProtectedLayout({ children }) {
@@ -52,6 +53,9 @@ export default function App() {
             } />
             <Route path="/analytics" element={
               <ProtectedLayout><Analytics /></ProtectedLayout>
+            } />
+            <Route path="/plan" element={
+              <ProtectedLayout><PlanYourDay /></ProtectedLayout>
             } />
             <Route path="/profile" element={
               <ProtectedLayout><Profile /></ProtectedLayout>

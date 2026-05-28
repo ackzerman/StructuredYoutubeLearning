@@ -29,19 +29,28 @@ export default function Register() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0b0d15',
+      minHeight: '100vh', background: '#fbfaee',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
-      <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(240,160,48,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-      <div style={{ width: '100%', maxWidth: 400, position: 'relative' }}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 48, fontWeight: 800, color: '#f0a030', letterSpacing: '-0.04em', lineHeight: 1 }}>learnr.</div>
-          <p style={{ color: '#828aaa', fontSize: 15, marginTop: 10 }}>Start tracking your learning today</p>
+      <div style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 48, fontWeight: 700, color: '#181f21',
+            letterSpacing: '-0.02em', lineHeight: 1,
+          }}>Learnr</div>
+          <p style={{
+            fontFamily: "'Public Sans', sans-serif",
+            color: '#747879', fontSize: 16, marginTop: 12,
+          }}>Start tracking your learning today</p>
         </div>
 
-        <div className="card fade-up" style={{ padding: 28 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, textAlign: 'center', marginBottom: 24, color: '#dee2f0' }}>
+        <div className="card fade-up" style={{ padding: 32 }}>
+          <h2 style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 24, fontWeight: 700, textAlign: 'center',
+            marginBottom: 28, color: '#181f21',
+          }}>
             Create account
           </h2>
 
@@ -60,14 +69,17 @@ export default function Register() {
               hint="At least 6 characters"
             />
             <ErrBox msg={err} />
-            <button type="submit" className="btn-primary" disabled={busy} style={{ width: '100%', padding: 12, fontSize: 15 }}>
-              {busy ? 'Creating account…' : 'Create account'}
+            <button type="submit" className="btn-primary" disabled={busy} style={{ width: '100%', padding: 14, fontSize: 16 }}>
+              {busy ? 'Creating account…' : 'CREATE ACCOUNT'}
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', marginTop: 20, color: '#828aaa', fontSize: 14 }}>
+          <p style={{ textAlign: 'center', marginTop: 24, color: '#747879', fontSize: 14 }}>
             Already have an account?{' '}
-            <Link to="/login" style={{ color: '#f0a030', fontWeight: 700, textDecoration: 'none' }}>
+            <Link to="/login" style={{
+              color: '#181f21', fontWeight: 700, textDecoration: 'none',
+              borderBottom: '2px solid #181f21', paddingBottom: 1,
+            }}>
               Sign in
             </Link>
           </p>

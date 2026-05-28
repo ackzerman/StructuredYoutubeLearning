@@ -22,8 +22,8 @@ const VIEWS = [
 ];
 
 const TT_STYLE = {
-  contentStyle: { background: '#1a1d2e', border: '1px solid #252a3d', borderRadius: 8, color: '#dee2f0', fontSize: 13 },
-  cursor: { fill: 'rgba(240,160,48,0.06)' },
+  contentStyle: { background: '#ffffff', border: '2px solid #181f21', borderRadius: 0, color: '#181f21', fontSize: 13, fontFamily: "'Public Sans', sans-serif" },
+  cursor: { fill: 'rgba(83,99,72,0.06)' },
 };
 
 export default function Analytics() {
@@ -95,10 +95,10 @@ export default function Analytics() {
 
       {/* Overall stats */}
       <div className="grid-stats" style={{ marginBottom: 24 }}>
-        <StatCard label="Total videos"  value={totals.videos}          color="#f0a030" sub="all time" />
-        <StatCard label="Total hours"   value={`${totals.hours}h`}     color="#13c5b4" sub="watch time" />
-        <StatCard label="Active months" value={totals.months}          color="#f97316" sub="with activity" />
-        <StatCard label="Active days"   value={totals.active}          color="#828aaa" sub="with activity" />
+        <StatCard label="Total videos"  value={totals.videos}          color="#181f21" sub="all time" />
+        <StatCard label="Total hours"   value={`${totals.hours}h`}     color="#536348" sub="watch time" />
+        <StatCard label="Active months" value={totals.months}          color="#003365" sub="with activity" />
+        <StatCard label="Active days"   value={totals.active}          color="#747879" sub="with activity" />
       </div>
 
       {/* Heatmap */}
@@ -139,45 +139,45 @@ export default function Analytics() {
         </div>
 
         {activeData.length === 0 ? (
-          <p style={{ color: '#828aaa', textAlign: 'center', padding: '40px 0', fontSize: 14 }}>
+          <p style={{ color: '#747879', textAlign: 'center', padding: '40px 0', fontSize: 14 }}>
             No data for this period yet.
           </p>
         ) : (
           <div className="grid-2">
             {/* Videos chart */}
             <div>
-              <p style={{ color: '#828aaa', fontSize: 11, marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <p className="label-caps" style={{ color: '#747879', marginBottom: 10 }}>
                 Videos watched
               </p>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={activeData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#252a3d" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: '#454e6a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#454e6a', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e4e3d7" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: '#747879', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#747879', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip {...TT_STYLE} formatter={(v) => [v, 'Videos']} />
-                  <Bar dataKey="videos" fill="#f0a030" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="videos" fill="#536348" radius={[0, 0, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             {/* Hours chart */}
             <div>
-              <p style={{ color: '#828aaa', fontSize: 11, marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <p className="label-caps" style={{ color: '#747879', marginBottom: 10 }}>
                 Hours watched
               </p>
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={activeData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <defs>
-                    <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#13c5b4" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#13c5b4" stopOpacity={0} />
+                    <linearGradient id="sageGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#536348" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#536348" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#252a3d" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: '#454e6a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#454e6a', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e4e3d7" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: '#747879', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#747879', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip {...TT_STYLE} formatter={(v) => [`${v}h`, 'Hours']} />
-                  <Area dataKey="hours" stroke="#13c5b4" strokeWidth={2} fill="url(#tealGrad)" />
+                  <Area dataKey="hours" stroke="#003365" strokeWidth={2} fill="url(#sageGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -186,22 +186,31 @@ export default function Analytics() {
 
         {/* Totals for this view */}
         {activeData.length > 0 && (
-          <div style={{ display: 'flex', gap: 28, marginTop: 20, paddingTop: 16, borderTop: '1px solid #252a3d', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 28, marginTop: 20, paddingTop: 16, borderTop: '2px solid #181f21', flexWrap: 'wrap' }}>
             <div>
-              <p style={{ color: '#828aaa', fontSize: 11, margin: '0 0 2px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Period total</p>
-              <p style={{ color: '#f0a030', fontSize: 18, fontWeight: 800, margin: 0 }}>
+              <p className="label-caps" style={{ color: '#747879', margin: '0 0 4px' }}>Period total</p>
+              <p style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                color: '#536348', fontSize: 20, fontWeight: 800, margin: 0,
+              }}>
                 {activeData.reduce((a, d) => a + d.videos, 0)} videos
               </p>
             </div>
             <div>
-              <p style={{ color: '#828aaa', fontSize: 11, margin: '0 0 2px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Period hours</p>
-              <p style={{ color: '#13c5b4', fontSize: 18, fontWeight: 800, margin: 0 }}>
+              <p className="label-caps" style={{ color: '#747879', margin: '0 0 4px' }}>Period hours</p>
+              <p style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                color: '#003365', fontSize: 20, fontWeight: 800, margin: 0,
+              }}>
                 {Math.round(activeData.reduce((a, d) => a + d.hours, 0) * 10) / 10}h
               </p>
             </div>
             <div>
-              <p style={{ color: '#828aaa', fontSize: 11, margin: '0 0 2px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avg per period</p>
-              <p style={{ color: '#828aaa', fontSize: 18, fontWeight: 800, margin: 0 }}>
+              <p className="label-caps" style={{ color: '#747879', margin: '0 0 4px' }}>Avg per period</p>
+              <p style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                color: '#747879', fontSize: 20, fontWeight: 800, margin: 0,
+              }}>
                 {activeData.length > 0 ? Math.round(activeData.reduce((a, d) => a + d.videos, 0) / activeData.length * 10) / 10 : 0} videos
               </p>
             </div>

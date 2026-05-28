@@ -1,75 +1,102 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-const NAV_ITEMS = [
-  { to: '/',          label: 'Dashboard' },
-  { to: '/courses',   label: 'My Courses' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/profile',   label: 'Profile' },
+const NAV_LINKS = [
+  { to: '/',        label: 'Home' },
+  { to: '/courses', label: 'Courses' },
+  { to: '/plan',    label: 'Plan My Day' },
 ];
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-
-  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
     <nav style={{
-      background: '#13161f',
-      borderBottom: '1px solid #252a3d',
-      padding: '0 24px',
+      background: '#fbfaee',
+      borderBottom: '4px solid #181f21',
+      padding: '0 40px',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 56,
+      justifyContent: 'center',
+      height: 80,
       position: 'sticky',
       top: 0,
       zIndex: 100,
     }}>
-      {/* Logo + tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+      {/* Inner container — matches page-wrapper max-width for alignment */}
+      <div style={{
+        maxWidth: 1200, width: '100%',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+      {/* Left: Logo + nav links */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
         <NavLink to="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontSize: 24, fontWeight: 800, color: '#f0a030', letterSpacing: '-0.03em' }}>
-            learnr.
+          <span style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 28, fontWeight: 700,
+            color: '#181f21', letterSpacing: '-0.02em',
+          }}>
+            Learnr
           </span>
         </NavLink>
-        <div style={{ display: 'flex', gap: 2 }}>
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.to === '/'}>
+
+        <div style={{ display: 'flex', gap: 0 }}>
+          {NAV_LINKS.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.to === '/'} style={{ textDecoration: 'none' }}>
               {({ isActive }) => (
-                <button className={`nav-tab${isActive ? ' active' : ''}`}>{item.label}</button>
+                <span
+                  className="nav-tab"
+                  style={isActive ? {
+                    color: '#181f21',
+                    borderBottom: '2px solid #181f21',
+                    paddingBottom: 6,
+                  } : {}}
+                >
+                  {item.label}
+                </span>
               )}
             </NavLink>
           ))}
         </div>
       </div>
 
-      {/* User + logout */}
+      {/* Right: Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <NavLink to="/profile" style={{ textDecoration: 'none' }}>
+          {({ isActive }) => (
             <div style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#f0a030,#e06010)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, fontWeight: 800, color: '#fff',
-            }}>
-              {(user.name || 'U')[0].toUpperCase()}
-            </div>
-            <span style={{ fontSize: 13, color: '#9ba3c4', fontWeight: 500 }}>
-              {user.name.split(' ')[0]}
-            </span>
-            {user.streak > 0 && (
-              <span style={{ fontSize: 12, color: '#f97316', fontWeight: 700 }}>
-                {user.streak}🔥
+              display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+              padding: '6px 12px',
+              background: isActive ? '#d0e3c1' : 'transparent',
+              border: isActive ? '2px solid #181f21' : '2px solid transparent',
+              transition: 'all 0.15s',
+            }}
+              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#d0e3c1'; }}
+              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+            >
+              {/* Square avatar */}
+              <div style={{
+                width: 32, height: 32,
+                border: '2px solid #181f21',
+                background: '#d0e3c1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 800, color: '#181f21',
+                fontFamily: "'Space Grotesk', sans-serif",
+              }}>
+                {(user?.name || 'U')[0].toUpperCase()}
+              </div>
+              <span className="nav-tab" style={{
+                padding: 0, border: 'none',
+                color: isActive ? '#181f21' : '#434749',
+                fontWeight: 700,
+              }}>
+                {user?.name?.split(' ')[0] || 'Profile'}
               </span>
-            )}
-          </div>
-        )}
-        <button className="btn-ghost" style={{ fontSize: 12, padding: '5px 12px' }} onClick={handleLogout}>
-          Sign out
-        </button>
+            </div>
+          )}
+        </NavLink>
+      </div>
       </div>
     </nav>
   );

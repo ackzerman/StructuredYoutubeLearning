@@ -58,3 +58,13 @@ export const analyticsAPI = {
   heatmap: (range = '30d') => api.get(`/analytics/heatmap?range=${range}`),
   summary: ()              => api.get('/analytics/summary'),
 };
+
+// ─── Goals (Plan Your Day) ────────────────────────────────────────────────────
+export const goalsAPI = {
+  getToday:    ()           => api.get('/goals/today'),
+  save:        (body)       => api.post('/goals', body),
+  history:     (type, page) => api.get(`/goals/history?type=${type}&page=${page || 1}`),
+  addTask:     (body)       => api.post('/goals/tasks', body),
+  toggleTask:  (taskId)     => api.patch(`/goals/tasks/${taskId}`),
+  deleteTask:  (taskId)     => api.delete(`/goals/tasks/${taskId}`),
+};

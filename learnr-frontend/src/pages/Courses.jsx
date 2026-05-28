@@ -25,10 +25,13 @@ function CourseCard({ course, onClick }) {
       <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <CourseBadge source={course.source} />
-          {cp === 100 && <span style={{ fontSize: 12, color: '#4ade80', fontWeight: 700 }}>✓ Complete</span>}
+          {cp === 100 && <span className="label-caps" style={{ color: '#536348' }}>✓ Complete</span>}
         </div>
 
-        <h3 style={{ color: '#dee2f0', fontSize: 15, fontWeight: 700, lineHeight: 1.4, margin: 0 }}>
+        <h3 style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          color: '#181f21', fontSize: 16, fontWeight: 700, lineHeight: 1.3, margin: 0,
+        }}>
           {course.title}
         </h3>
 
@@ -38,13 +41,13 @@ function CourseCard({ course, onClick }) {
           </div>
         )}
 
-        <p style={{ color: '#828aaa', fontSize: 13, margin: 0 }}>
+        <p className="label-caps" style={{ color: '#747879', margin: 0, fontSize: 10 }}>
           {course.totalVideos} videos · {fmt(course.totalDuration)}
         </p>
 
         <div>
-          <ProgressBar value={cp} color={cp === 100 ? '#4ade80' : '#f0a030'} />
-          <p style={{ color: '#454e6a', fontSize: 12, marginTop: 4, textAlign: 'right' }}>{cp}% complete</p>
+          <ProgressBar value={cp} color={cp === 100 ? '#536348' : '#536348'} />
+          <p className="label-caps" style={{ color: '#c3c7c8', fontSize: 10, marginTop: 4, textAlign: 'right' }}>{cp}% complete</p>
         </div>
       </div>
     </div>
@@ -87,9 +90,9 @@ function YouTubeForm({ onDone }) {
         onChange={(e) => setTags(e.target.value)}
       />
       <ErrBox msg={err} />
-      {busy && <p style={{ color: '#828aaa', fontSize: 13 }}>⏳ Fetching from YouTube… large playlists may take a moment.</p>}
+      {busy && <p style={{ color: '#747879', fontSize: 13 }}>⏳ Fetching from YouTube… large playlists may take a moment.</p>}
       <button type="submit" className="btn-primary" disabled={busy} style={{ width: '100%' }}>
-        {busy ? 'Importing playlist…' : 'Import Playlist'}
+        {busy ? 'IMPORTING PLAYLIST…' : 'IMPORT PLAYLIST'}
       </button>
     </form>
   );
@@ -139,7 +142,7 @@ function ManualForm({ onDone }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
           {videos.map((v, i) => (
-            <div key={i} style={{ background: '#0e1020', border: '1px solid #252a3d', borderRadius: 8, padding: 12 }}>
+            <div key={i} style={{ background: '#f5f4e8', border: '2px solid #181f21', padding: 12 }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <input
                   className="input" style={{ flex: 3 }} placeholder={`Video ${i + 1} title`}
@@ -161,12 +164,12 @@ function ManualForm({ onDone }) {
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 12, color: '#454e6a', marginTop: 6 }}>Duration in seconds — e.g. 600 = 10 minutes</p>
+        <p style={{ fontSize: 12, color: '#747879', marginTop: 6, fontFamily: "'Space Mono', monospace" }}>Duration in seconds — e.g. 600 = 10 minutes</p>
       </div>
 
       <ErrBox msg={err} />
       <button type="submit" className="btn-primary" disabled={busy} style={{ width: '100%' }}>
-        {busy ? 'Creating…' : 'Create Course'}
+        {busy ? 'CREATING…' : 'CREATE COURSE'}
       </button>
     </form>
   );
@@ -220,7 +223,7 @@ export default function Courses() {
   return (
     <div className="page-wrapper fade-up">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 className="page-title">My Courses</h1>
           <p className="page-sub">{pagination.total} course{pagination.total !== 1 ? 's' : ''}</p>
@@ -235,7 +238,7 @@ export default function Courses() {
 
       {/* Filtered count indicator */}
       {filterTags.length > 0 && (
-        <p style={{ color: '#828aaa', fontSize: 13, marginBottom: 12 }}>
+        <p style={{ color: '#747879', fontSize: 13, marginBottom: 12, fontFamily: "'Public Sans', sans-serif" }}>
           Showing {filteredCourses.length} of {courses.length} course{courses.length !== 1 ? 's' : ''}
         </p>
       )}
@@ -269,7 +272,7 @@ export default function Courses() {
           {pagination.totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 32 }}>
               <button className="btn-ghost" disabled={pagination.page <= 1} onClick={() => load(pagination.page - 1)}>← Prev</button>
-              <span style={{ color: '#828aaa', fontSize: 14 }}>{pagination.page} / {pagination.totalPages}</span>
+              <span className="label-caps" style={{ color: '#747879' }}>{pagination.page} / {pagination.totalPages}</span>
               <button className="btn-ghost" disabled={pagination.page >= pagination.totalPages} onClick={() => load(pagination.page + 1)}>Next →</button>
             </div>
           )}
@@ -294,4 +297,3 @@ export default function Courses() {
     </div>
   );
 }
-

@@ -6,8 +6,8 @@ export function Spinner({ size = 32, pad = 60 }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: pad }}>
       <div style={{
-        width: size, height: size, borderRadius: '50%',
-        border: '3px solid #252a3d', borderTopColor: '#f0a030',
+        width: size, height: size, borderRadius: 0,
+        border: '3px solid #c3c7c8', borderTopColor: '#181f21',
         animation: 'spin 0.75s linear infinite',
       }} />
     </div>
@@ -20,22 +20,22 @@ export function ErrBox({ msg }) {
   return <div className="err-box">⚠ {msg}</div>;
 }
 
-/* ─── Progress bar ─────────────────────────────────────────────────────────── */
-export function ProgressBar({ value, color = '#f0a030', height = 4 }) {
+/* ─── Progress bar — segmented retro style ─────────────────────────────────── */
+export function ProgressBar({ value, color = '#536348', height = 4 }) {
   return (
-    <div className="progress-bar" style={{ height }}>
-      <div className="progress-fill" style={{ width: `${value}%`, background: color }} />
+    <div className="progress-bar" style={{ height: height + 4 }}>
+      <div className="progress-fill" style={{ width: `${value}%`, backgroundColor: color }} />
     </div>
   );
 }
 
-/* ─── Heatmap ──────────────────────────────────────────────────────────────── */
+/* ─── Heatmap — sage-based color scale ─────────────────────────────────────── */
 const heatColor = (c) => {
-  if (c === 0) return '#252a3d';
-  if (c === 1) return '#6b4010';
-  if (c <= 3)  return '#a86020';
-  if (c <= 6)  return '#d08030';
-  return '#f0a030';
+  if (c === 0) return '#efeee3';
+  if (c === 1) return '#d0e3c1';
+  if (c <= 3)  return '#a8ba9a';
+  if (c <= 6)  return '#7a9a68';
+  return '#536348';
 };
 
 export function Heatmap({ data = [], weeks = 13 }) {
@@ -74,34 +74,40 @@ export function Heatmap({ data = [], weeks = 13 }) {
 export function HeatmapLegend() {
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <span style={{ fontSize: 11, color: '#454e6a' }}>Less</span>
+      <span className="label-caps" style={{ fontSize: 10, color: '#747879' }}>Less</span>
       {[0, 1, 3, 5, 7].map((c) => (
         <div key={c} className="heatmap-day" style={{ background: heatColor(c) }} />
       ))}
-      <span style={{ fontSize: 11, color: '#454e6a' }}>More</span>
+      <span className="label-caps" style={{ fontSize: 10, color: '#747879' }}>More</span>
     </div>
   );
 }
 
-/* ─── StatCard ─────────────────────────────────────────────────────────────── */
-export function StatCard({ label, value, color = '#f0a030', sub }) {
+/* ─── StatCard — retro with block shadow ───────────────────────────────────── */
+export function StatCard({ label, value, color = '#536348', sub }) {
   return (
     <div className="stat-card" style={{ borderLeftColor: color }}>
-      <p style={{ fontSize: 11, color: '#828aaa', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{label}</p>
-      <p style={{ fontSize: 28, fontWeight: 800, color, margin: 0, letterSpacing: '-0.02em' }}>{value}</p>
-      {sub && <p style={{ fontSize: 12, color: '#454e6a', margin: '4px 0 0' }}>{sub}</p>}
+      <p className="label-caps" style={{ color: '#747879', margin: '0 0 8px' }}>{label}</p>
+      <p style={{
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontSize: 28, fontWeight: 800, color, margin: 0, letterSpacing: '-0.02em',
+      }}>{value}</p>
+      {sub && <p style={{ fontSize: 12, color: '#c3c7c8', margin: '4px 0 0', fontFamily: "'Public Sans', sans-serif" }}>{sub}</p>}
     </div>
   );
 }
 
-/* ─── Modal ────────────────────────────────────────────────────────────────── */
+/* ─── Modal — retro with sage block shadow ─────────────────────────────────── */
 export function Modal({ title, onClose, children, wide = false }) {
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`modal-box${wide ? ' wide' : ''}`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#dee2f0' }}>{title}</h2>
-          <button className="btn-icon" onClick={onClose} style={{ fontSize: 18, border: 'none' }}>×</button>
+          <h2 style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 20, fontWeight: 700, color: '#181f21',
+          }}>{title}</h2>
+          <button className="btn-icon" onClick={onClose} style={{ fontSize: 18, border: '2px solid #181f21' }}>×</button>
         </div>
         {children}
       </div>
@@ -118,7 +124,7 @@ export function LabelInput({ label, textarea = false, hint, ...props }) {
         ? <textarea className="input" {...props} />
         : <input className="input" {...props} />
       }
-      {hint && <p style={{ fontSize: 12, color: '#454e6a', margin: 0 }}>{hint}</p>}
+      {hint && <p style={{ fontSize: 12, color: '#747879', margin: 0, fontFamily: "'Public Sans', sans-serif" }}>{hint}</p>}
     </div>
   );
 }
@@ -130,15 +136,18 @@ export function CourseBadge({ source }) {
     : <span className="badge-manual">✏ Manual</span>;
 }
 
-/* ─── VideoProgress circle ─────────────────────────────────────────────────── */
+/* ─── VideoProgress square — retro index number ────────────────────────────── */
 export function VideoCircle({ index, completed, active }) {
-  const bg = completed ? '#4ade80' : active ? '#f0a030' : '#252a3d';
-  const color = (completed || active) ? '#000' : '#454e6a';
+  const bg = completed ? '#536348' : active ? '#181f21' : '#efeee3';
+  const color = completed ? '#fbfaee' : active ? '#fbfaee' : '#747879';
+  const borderColor = '#181f21';
   return (
     <div style={{
-      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+      width: 28, height: 28, borderRadius: 0, flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: bg, color, fontSize: completed ? 13 : 12, fontWeight: 700,
+      border: `2px solid ${borderColor}`,
+      fontFamily: "'Space Grotesk', sans-serif",
     }}>
       {completed ? '✓' : index + 1}
     </div>
@@ -150,8 +159,11 @@ export function EmptyState({ icon, title, sub, action, onAction }) {
   return (
     <div style={{ textAlign: 'center', padding: '64px 20px' }}>
       <div style={{ fontSize: 52, marginBottom: 16 }}>{icon}</div>
-      <h3 style={{ color: '#dee2f0', fontSize: 17, fontWeight: 700, marginBottom: 8 }}>{title}</h3>
-      {sub && <p style={{ color: '#828aaa', fontSize: 14, marginBottom: 20 }}>{sub}</p>}
+      <h3 style={{
+        fontFamily: "'Space Grotesk', sans-serif",
+        color: '#181f21', fontSize: 20, fontWeight: 700, marginBottom: 8,
+      }}>{title}</h3>
+      {sub && <p style={{ color: '#747879', fontSize: 14, marginBottom: 20, fontFamily: "'Public Sans', sans-serif" }}>{sub}</p>}
       {action && <button className="btn-primary" onClick={onAction}>{action}</button>}
     </div>
   );
@@ -160,10 +172,13 @@ export function EmptyState({ icon, title, sub, action, onAction }) {
 /* ─── Section header row ───────────────────────────────────────────────────── */
 export function SectionHeader({ title, action, onAction }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-      <h3 className="section-header">{title}</h3>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 4, height: 28, background: '#181f21' }} />
+        <h3 className="section-header">{title}</h3>
+      </div>
       {action && (
-        <span onClick={onAction} style={{ color: '#f0a030', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+        <span onClick={onAction} className="label-caps" style={{ color: '#536348', cursor: 'pointer' }}>
           {action}
         </span>
       )}
@@ -224,7 +239,7 @@ export function TagFilterBar({ allTags, activeTags, onToggle }) {
   if (!allTags || allTags.length === 0) return null;
   return (
     <div className="tag-filter-bar">
-      <span style={{ fontSize: 12, color: '#454e6a', fontWeight: 600, marginRight: 4 }}>Filter:</span>
+      <span className="label-caps" style={{ color: '#747879', marginRight: 4 }}>Filter:</span>
       {allTags.map((t) => (
         <button
           key={t}
@@ -238,7 +253,7 @@ export function TagFilterBar({ allTags, activeTags, onToggle }) {
       {activeTags.length > 0 && (
         <button
           className="tag-chip"
-          style={{ fontSize: 11, color: '#828aaa' }}
+          style={{ color: '#747879' }}
           onClick={() => activeTags.forEach(onToggle)}
         >
           Clear all

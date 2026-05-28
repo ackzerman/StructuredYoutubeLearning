@@ -177,8 +177,8 @@ export default function VideoPlayer() {
 
   return (
     <div className="fade-up" style={{
-      maxWidth: 1200, margin: '0 auto', padding: '24px',
-      display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20,
+      maxWidth: 1200, margin: '0 auto', padding: '24px 40px',
+      display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24,
     }}>
       {/* ── Main column ───────────────────────────────────────────────── */}
       <div>
@@ -187,7 +187,7 @@ export default function VideoPlayer() {
         </button>
 
         {/* Video embed / player */}
-        <div style={{ background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+        <div style={{ background: '#181f21', borderRadius: 0, overflow: 'hidden', marginBottom: 16, border: '4px solid #181f21' }}>
           {ytId ? (
             <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
               <iframe
@@ -202,7 +202,7 @@ export default function VideoPlayer() {
           ) : (
             <div style={{ padding: '80px 20px', textAlign: 'center' }}>
               <p style={{ fontSize: 48, margin: '0 0 12px' }}>🎬</p>
-              <p style={{ color: '#828aaa', fontSize: 14 }}>No video URL for this lesson.</p>
+              <p style={{ color: '#c3c7c8', fontSize: 14 }}>No video URL for this lesson.</p>
             </div>
           )}
         </div>
@@ -211,13 +211,16 @@ export default function VideoPlayer() {
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ fontSize: 17, fontWeight: 700, color: '#dee2f0', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
+              <h2 style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 20, fontWeight: 700, color: '#181f21', margin: '0 0 5px', letterSpacing: '-0.01em',
+              }}>
                 {curVid.title}
               </h2>
-              <p style={{ color: '#828aaa', fontSize: 13, margin: 0 }}>
+              <p className="label-caps" style={{ color: '#747879', fontSize: 10, margin: 0 }}>
                 {fmt(curVid.duration)} &nbsp;·&nbsp; Video {idx + 1} of {videos.length}
                 {curVid.progress.completed && (
-                  <span style={{ color: '#4ade80', marginLeft: 10, fontWeight: 700 }}>✓ Completed</span>
+                  <span style={{ color: '#536348', marginLeft: 10, fontWeight: 700 }}>✓ Completed</span>
                 )}
               </p>
             </div>
@@ -228,14 +231,14 @@ export default function VideoPlayer() {
                 onClick={handleToggleStar}
                 title={starred ? 'Unstar video' : 'Star as important'}
                 style={{
-                  background: starred ? 'rgba(240,160,48,0.12)' : 'transparent',
-                  border: `1px solid ${starred ? 'rgba(240,160,48,0.5)' : 'var(--border)'}`,
-                  borderRadius: 6,
+                  background: starred ? 'rgba(83,99,72,0.12)' : 'transparent',
+                  border: `2px solid ${starred ? '#536348' : '#181f21'}`,
+                  borderRadius: 0,
                   cursor: 'pointer',
                   fontSize: 18,
                   lineHeight: 1,
                   padding: '7px 11px',
-                  color: starred ? '#f0a030' : '#454e6a',
+                  color: starred ? '#536348' : '#c3c7c8',
                   transition: 'all 0.15s',
                 }}
               >
@@ -243,7 +246,7 @@ export default function VideoPlayer() {
               </button>
               <button
                 className="btn-ghost"
-                style={{ borderColor: playing ? 'rgba(74,222,128,0.5)' : '', color: playing ? '#4ade80' : '' }}
+                style={{ borderColor: playing ? 'rgba(83,99,72,0.5)' : '', color: playing ? '#536348' : '' }}
                 onClick={() => setPlaying((p) => !p)}
               >
                 {playing ? '⏸ Timer on' : '▶ Start timer'}
@@ -256,11 +259,11 @@ export default function VideoPlayer() {
 
           {/* Watch progress */}
           <div style={{ marginTop: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#828aaa', marginBottom: 6 }}>
-              <span>{fmt(watched)} watched</span>
-              <span>{fmt(curVid.duration)} total &nbsp;·&nbsp; {wp}%</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span className="label-caps" style={{ color: '#747879', fontSize: 10 }}>{fmt(watched)} watched</span>
+              <span className="label-caps" style={{ color: '#747879', fontSize: 10 }}>{fmt(curVid.duration)} total · {wp}%</span>
             </div>
-            <ProgressBar value={wp} color={curVid.progress.completed ? '#4ade80' : '#f0a030'} height={6} />
+            <ProgressBar value={wp} color={curVid.progress.completed ? '#536348' : '#536348'} height={6} />
           </div>
 
           {/* Prev / Next */}
@@ -273,9 +276,15 @@ export default function VideoPlayer() {
         {/* Notes */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#dee2f0', margin: 0 }}>📝 My notes</h3>
+            <h3 style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 16, fontWeight: 700, color: '#181f21', margin: 0, display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_note</span>
+              My notes
+            </h3>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: noteSaved ? '#4ade80' : '#454e6a', transition: 'color 0.3s' }}>
+              <span className="label-caps" style={{ fontSize: 10, color: noteSaved ? '#536348' : '#747879', transition: 'color 0.3s' }}>
                 {noteSaved ? 'Saved ✓' : 'Saving…'}
               </span>
               {note && <button className="btn-danger" style={{ fontSize: 12, padding: '4px 10px' }} onClick={deleteNote}>Delete note</button>}
@@ -293,9 +302,12 @@ export default function VideoPlayer() {
 
       {/* ── Playlist sidebar ───────────────────────────────────────────── */}
       <div className="card" style={{ height: 'fit-content', position: 'sticky', top: 76, padding: '16px 14px' }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: '#dee2f0', marginBottom: 12 }}>
+        <h3 style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 14, fontWeight: 700, color: '#181f21', marginBottom: 12,
+        }}>
           Playlist &nbsp;
-          <span style={{ color: '#828aaa', fontWeight: 500 }}>({videos.length})</span>
+          <span style={{ color: '#747879', fontWeight: 500 }}>({videos.length})</span>
         </h3>
 
         <div className="scroll-list" style={{ maxHeight: '72vh', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -318,17 +330,18 @@ export default function VideoPlayer() {
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <p style={{
-                      color: isActive ? '#f0a030' : '#dee2f0',
+                      color: isActive ? '#536348' : '#181f21',
                       fontSize: 12, fontWeight: isActive ? 700 : 400,
                       margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                      fontFamily: "'Public Sans', sans-serif",
                     }}>
                       {v.title}
                     </p>
                     {v.progress?.starred && (
-                      <span style={{ color: '#f0a030', fontSize: 12, flexShrink: 0 }}>★</span>
+                      <span style={{ color: '#003365', fontSize: 12, flexShrink: 0 }}>★</span>
                     )}
                   </div>
-                  <p style={{ color: '#454e6a', fontSize: 11, margin: '2px 0 0' }}>{fmt(v.duration)}</p>
+                  <p className="label-caps" style={{ color: '#c3c7c8', fontSize: 10, margin: '2px 0 0' }}>{fmt(v.duration)}</p>
                   {v.progress.watchedSeconds > 0 && !v.progress.completed && (
                     <div style={{ marginTop: 4 }}>
                       <ProgressBar value={vwp} height={2} />
