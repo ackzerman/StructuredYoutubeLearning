@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { coursesAPI } from '../api';
 import { fmt, parseTags, ytThumb } from '../utils';
-import { Spinner, ErrBox, ProgressBar, Modal, LabelInput, CourseBadge, EmptyState, TagFilterBar } from '../components/UI';
+import { Spinner, ErrBox, ProgressBar, Modal, LabelInput, CourseBadge, EmptyState } from '../components/UI';
 import { useToast } from '../hooks/useToast';
 
 /* ─── Course card ────────────────────────────────────────────────────────── */
@@ -185,6 +185,7 @@ export default function Courses() {
   const [showModal, setShowModal]   = useState(false);
   const [tab, setTab]               = useState('youtube');
   const [filterTags, setFilterTags] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const load = useCallback(async (pg = 1) => {
     setLoading(true);
@@ -212,32 +213,102 @@ export default function Courses() {
     );
   }, []);
 
-  // Filter courses based on active tag filters
+  // Filter courses based on active tag filters and search query
   const filteredCourses = useMemo(() => {
-    if (filterTags.length === 0) return courses;
-    return courses.filter((c) =>
-      filterTags.every((ft) => (c.tags || []).includes(ft))
-    );
-  }, [courses, filterTags]);
+    let result = courses;
+    if (filterTags.length > 0) {
+      result = result.filter((c) =>
+        filterTags.every((ft) => (c.tags || []).includes(ft))
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((c) =>
+        c.title.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [courses, filterTags, searchQuery]);
 
   return (
     <div className="page-wrapper fade-up">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
+      {/* Header section */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <h1 className="page-title">My Courses</h1>
-          <p className="page-sub">{pagination.total} course{pagination.total !== 1 ? 's' : ''}</p>
+          {/* Search + Add Course (right side) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span className="material-symbols-outlined" style={{
+                position: 'absolute', left: 12, fontSize: 20, color: '#434749', pointerEvents: 'none',
+              }}>search</span>
+              <input
+                className="input"
+                type="text"
+                placeholder="Search courses..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  padding: '10px 14px 10px 40px', fontSize: 16, minWidth: 280,
+                  border: '2px solid #181f21', background: '#ffffff',
+                  fontFamily: "'Space Grotesk', sans-serif", fontWeight: 500,
+                  boxShadow: '4px 4px 0px 0px #181f21',
+                }}
+              />
+            </div>
+            <button className="btn-primary" onClick={() => setShowModal(true)}>Add Course</button>
+          </div>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>+ Add Course</button>
-      </div>
+      </section>
 
-      {/* Tag filter bar */}
+      {/* Filter Bar — Stitch-accurate rectangular buttons */}
       {!loading && courses.length > 0 && (
-        <TagFilterBar allTags={allTags} activeTags={filterTags} onToggle={toggleTag} />
+        <section style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
+          {/* "All" button — always first */}
+          <button
+            onClick={() => setFilterTags([])}
+            style={{
+              padding: '8px 24px',
+              border: '2px solid #181f21',
+              background: filterTags.length === 0 ? '#181f21' : '#ffffff',
+              color: filterTags.length === 0 ? '#ffffff' : '#181f21',
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 16, fontWeight: 600, cursor: 'pointer',
+              boxShadow: filterTags.length === 0 ? '4px 4px 0px 0px #181f21' : 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            All
+          </button>
+          {/* Dynamic tag buttons */}
+          {allTags.map((tag) => {
+            const isActive = filterTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                style={{
+                  padding: '8px 24px',
+                  border: '2px solid #181f21',
+                  background: isActive ? '#181f21' : '#ffffff',
+                  color: isActive ? '#ffffff' : '#181f21',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontSize: 16, fontWeight: 600, cursor: 'pointer',
+                  boxShadow: isActive ? '4px 4px 0px 0px #181f21' : 'none',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#d0e3c1'; }}
+                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = '#ffffff'; }}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </section>
       )}
 
       {/* Filtered count indicator */}
-      {filterTags.length > 0 && (
+      {(filterTags.length > 0 || searchQuery.trim()) && (
         <p style={{ color: '#747879', fontSize: 13, marginBottom: 12, fontFamily: "'Public Sans', sans-serif" }}>
           Showing {filteredCourses.length} of {courses.length} course{courses.length !== 1 ? 's' : ''}
         </p>
@@ -263,7 +334,8 @@ export default function Courses() {
         />
       ) : (
         <>
-          <div className="grid-3">
+          {/* Course Grid — with thick top border divider matching Stitch screen */}
+          <div className="grid-3" style={{ borderTop: '4px solid #181f21', paddingTop: 24 }}>
             {filteredCourses.map((c) => (
               <CourseCard key={c._id} course={c} onClick={() => navigate(`/courses/${c._id}`)} />
             ))}

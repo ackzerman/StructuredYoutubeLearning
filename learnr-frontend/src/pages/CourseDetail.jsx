@@ -142,67 +142,56 @@ export default function CourseDetail() {
           </div>
         ) : (
           <div>
-            {/* Top row: badge + actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <CourseBadge source={course.source} />
-                  {course.playlistUrl && (
-                    <a href={course.playlistUrl} target="_blank" rel="noopener noreferrer"
-                      className="label-caps" style={{ color: '#003365', textDecoration: 'none', borderBottom: '2px solid #003365', paddingBottom: 1 }}>
-                      View playlist ↗
-                    </a>
-                  )}
-                </div>
-                <h1 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 36, fontWeight: 700, color: '#181f21',
-                  margin: '0 0 12px', letterSpacing: '-0.02em', lineHeight: 1.1,
-                }}>
-                  {course.title}
-                </h1>
+            {/* Top row: badge + links */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <CourseBadge source={course.source} />
+              {course.playlistUrl && (
+                <a href={course.playlistUrl} target="_blank" rel="noopener noreferrer"
+                  className="label-caps" style={{ color: '#003365', textDecoration: 'none', borderBottom: '2px solid #003365', paddingBottom: 1 }}>
+                  View playlist ↗
+                </a>
+              )}
+            </div>
 
-                {/* Enhanced metadata row with icons */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#181f21' }}>video_library</span>
-                    <span className="label-caps">Total Videos: {stats.totalVideos}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#536348' }}>check_circle</span>
-                    <span className="label-caps">Watched: {stats.completedVideos}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#181f21' }}>schedule</span>
-                    <span className="label-caps">Duration: {fmt(course.totalDuration)}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#747879' }}>calendar_today</span>
-                    <span className="label-caps">Created: {fmtDate(course.createdAt)}</span>
-                  </div>
-                </div>
+            <h1 style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 36, fontWeight: 700, color: '#181f21',
+              margin: '0 0 12px', letterSpacing: '-0.02em', lineHeight: 1.1,
+            }}>
+              {course.title}
+            </h1>
 
-                {/* Tags */}
-                <div style={{ marginTop: 4 }}>
-                  <TagEditor
-                    tags={course.tags || []}
-                    onUpdate={async (newTags) => {
-                      try {
-                        await coursesAPI.update(id, { tags: newTags });
-                        setData((prev) => ({
-                          ...prev,
-                          course: { ...prev.course, tags: newTags },
-                        }));
-                        toast('Tags updated ✓');
-                      } catch (e) { toast(e.message, 'error'); }
-                    }}
-                  />
-                </div>
+            {/* Enhanced metadata row with icons */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#181f21' }}>video_library</span>
+                <span className="label-caps">Total Videos: {stats.totalVideos}</span>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button className="btn-ghost" onClick={() => setEditMode(true)}>Edit Course</button>
-                <button className="btn-danger" onClick={deleteCourse}>Delete Course</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#181f21' }}>schedule</span>
+                <span className="label-caps">Duration: {fmt(course.totalDuration)}</span>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#747879' }}>calendar_today</span>
+                <span className="label-caps">Created: {fmtDate(course.createdAt)}</span>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div style={{ marginTop: 4 }}>
+              <TagEditor
+                tags={course.tags || []}
+                onUpdate={async (newTags) => {
+                  try {
+                    await coursesAPI.update(id, { tags: newTags });
+                    setData((prev) => ({
+                      ...prev,
+                      course: { ...prev.course, tags: newTags },
+                    }));
+                    toast('Tags updated ✓');
+                  } catch (e) { toast(e.message, 'error'); }
+                }}
+              />
             </div>
 
             {/* Overall progress */}
@@ -213,13 +202,76 @@ export default function CourseDetail() {
               </div>
               <ProgressBar value={stats.completionPercentage} color={stats.completionPercentage === 100 ? '#536348' : '#536348'} height={8} />
             </div>
+
+            {/* Action Buttons — Stitch-accurate, bottom of hero */}
+            <div style={{ display: 'flex', gap: 16, marginTop: 24 }}>
+              <button
+                onClick={() => setEditMode(true)}
+                style={{
+                  background: '#fbfaee', color: '#181f21',
+                  border: '4px solid #181f21', padding: '12px 24px',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontSize: 16, fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '4px 4px 0px 0px #181f21',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#d0e3c1'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#fbfaee'}
+                onMouseDown={(e) => { e.currentTarget.style.transform = 'translate(4px, 4px)'; e.currentTarget.style.boxShadow = 'none'; }}
+                onMouseUp={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '4px 4px 0px 0px #181f21'; }}
+              >
+                Edit Course
+              </button>
+              <button
+                onClick={deleteCourse}
+                style={{
+                  background: '#ba1a1a', color: '#ffffff',
+                  border: '4px solid #181f21', padding: '12px 24px',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontSize: 16, fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '4px 4px 0px 0px #181f21',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseDown={(e) => { e.currentTarget.style.transform = 'translate(4px, 4px)'; e.currentTarget.style.boxShadow = 'none'; }}
+                onMouseUp={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '4px 4px 0px 0px #181f21'; }}
+              >
+                Delete Course
+              </button>
+            </div>
           </div>
         )}
         </div>
       </div>
 
+      {/* Bento stat cards */}
+      <div className="grid-bento" style={{ marginTop: 40 }}>
+        <div className="bento-card" style={{ background: '#003365' }}>
+          <span className="label-caps" style={{ color: '#fbfaee', opacity: 0.8 }}>Videos Done</span>
+          <span style={{
+            fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 700,
+            color: '#fbfaee', letterSpacing: '-0.02em',
+          }}>{stats.completedVideos}/{stats.totalVideos}</span>
+        </div>
+        <div className="bento-card" style={{ background: '#d0e3c1' }}>
+          <span className="label-caps" style={{ color: '#3c4b32' }}>Watch Time</span>
+          <span style={{
+            fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 700,
+            color: '#3c4b32', letterSpacing: '-0.02em',
+          }}>{fmt(stats.totalWatchTime)}</span>
+        </div>
+        
+      </div>
+
+      {showAddVideo && (
+        <Modal title="Add Video" onClose={() => setShowAddVideo(false)}>
+          <AddVideoForm courseId={id} onDone={() => { setShowAddVideo(false); load(); }} />
+        </Modal>
+      )}
+
       {/* Video list header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 64, marginBottom: 16 }}>
         <div style={{ width: 4, height: 28, background: '#181f21' }} />
         <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 600, color: '#181f21', margin: 0 }}>
           Course Content
@@ -330,37 +382,6 @@ export default function CourseDetail() {
             );
           })}
         </div>
-      )}
-
-      {/* Bento stat cards */}
-      <div className="grid-bento" style={{ marginTop: 40 }}>
-        <div className="bento-card" style={{ background: '#181f21' }}>
-          <span className="label-caps" style={{ color: '#fbfaee', opacity: 0.6 }}>Completion</span>
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 700,
-            color: '#fbfaee', letterSpacing: '-0.02em',
-          }}>{stats.completionPercentage}%</span>
-        </div>
-        <div className="bento-card" style={{ background: '#d0e3c1' }}>
-          <span className="label-caps" style={{ color: '#3c4b32' }}>Watch Time</span>
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 700,
-            color: '#3c4b32', letterSpacing: '-0.02em',
-          }}>{fmt(stats.totalWatchTime)}</span>
-        </div>
-        <div className="bento-card" style={{ background: '#003365' }}>
-          <span className="label-caps" style={{ color: '#fbfaee', opacity: 0.8 }}>Videos Done</span>
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 700,
-            color: '#fbfaee', letterSpacing: '-0.02em',
-          }}>{stats.completedVideos}/{stats.totalVideos}</span>
-        </div>
-      </div>
-
-      {showAddVideo && (
-        <Modal title="Add Video" onClose={() => setShowAddVideo(false)}>
-          <AddVideoForm courseId={id} onDone={() => { setShowAddVideo(false); load(); }} />
-        </Modal>
       )}
     </div>
   );

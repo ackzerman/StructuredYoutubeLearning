@@ -244,15 +244,15 @@ export default function VideoPlayer() {
               >
                 {starred ? '★' : '☆'}
               </button>
-              <button
+              {/*<button
                 className="btn-ghost"
                 style={{ borderColor: playing ? 'rgba(83,99,72,0.5)' : '', color: playing ? '#536348' : '' }}
                 onClick={() => setPlaying((p) => !p)}
               >
                 {playing ? '⏸ Timer on' : '▶ Start timer'}
-              </button>
+              </button>*/}
               {!curVid.progress.completed && (
-                <button className="btn-success" onClick={markComplete}>✓ Mark complete</button>
+                <button className="btn-success" onClick={markComplete}>Mark complete</button>
               )}
             </div>
           </div>

@@ -37,7 +37,7 @@ export default function Navbar() {
             fontSize: 28, fontWeight: 700,
             color: '#181f21', letterSpacing: '-0.02em',
           }}>
-            Learnr
+            learnr.
           </span>
         </NavLink>
 
